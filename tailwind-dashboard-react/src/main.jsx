@@ -15,7 +15,10 @@ import App from "./App";
 import { BrowserRouter } from "react-router-dom";
 import { ThemeProvider } from "@material-tailwind/react";
 import { MaterialTailwindControllerProvider } from "@/context";
+//import 'sweetalert2/dist/sweetalert2.min.css'; // 🔥 Importar CSS de SweetAlert2
 import "../public/css/tailwind.css";
+
+
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

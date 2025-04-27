@@ -17,6 +17,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -31,8 +33,10 @@ public class ReducirPdfController {
     }
 
 
-    @Value("${file.upload-dir}")
-    private String uploadDir;
+
+//
+//    @Value("${file.upload-dir}")
+//    private String uploadDir;
 
 
     //SUBIR ARCHIVO PDF
@@ -91,12 +95,94 @@ public class ReducirPdfController {
     }
 
 
+    @GetMapping("/compressed")
+    @ResponseBody
+    public ResponseEntity<Resource> getFirstFileCompressed() {
+        String rutaBase = System.getProperty("user.dir");
+        Path folderPath = Paths.get(rutaBase + File.separator + "compressed");
+
+        // Verificar si el directorio existe
+        File folder = folderPath.toFile();
+        if (!folder.exists() || !folder.isDirectory()) {
+            return ResponseEntity.status(500).body(null); // Error si no es un directorio válido
+        }
+
+        // Obtener todos los archivos de la carpeta
+        File[] files = folder.listFiles();
+        if (files == null || files.length == 0) {
+            return ResponseEntity.status(204).body(null); // No hay archivos, pero no es un error (204 No Content)
+        }
+
+        File file = files[0]; // Obtener el primer archivo
+        if (!file.getName().endsWith(".pdf")) {
+            return ResponseEntity.status(204).body(null); // Si el archivo no es PDF, devolver 204 No Content
+        }
+
+        try {
+            Path filePath = file.toPath();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_PDF) // Tipo de contenido PDF
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getName() + "\"")
+                        .body(resource);
+            } else {
+                return ResponseEntity.status(404).body(null); // El archivo no es legible
+            }
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(null); // Error al acceder al archivo
+        }
+    }
+
+
+
+//
+//    @GetMapping("/compressed")
+//    @ResponseBody
+//    public ResponseEntity<Resource> getFirstFileCompressed() {
+//        String rutaBase = System.getProperty("user.dir");
+//        Path folderPath = Paths.get(rutaBase + File.separator + "compressed");
+//
+//        // Verificar si el directorio existe
+//        File folder = folderPath.toFile();
+//        if (!folder.exists() || !folder.isDirectory()) {
+//            return ResponseEntity.status(500).body(null); // Error si no es un directorio válido
+//        }
+//
+//        // Obtener todos los archivos de la carpeta
+//        File[] files = folder.listFiles();
+//        if (files == null || files.length == 0) {
+//            return ResponseEntity.status(404).body(null); // No hay archivos
+//        }
+//
+//        File file = files[0]; // Obtener el primer archivo
+//        if (!file.getName().endsWith(".pdf")) {
+//            return ResponseEntity.status(404).body(null); // Solo procesar PDFs
+//        }
+//
+//        try {
+//            Path filePath = file.toPath();
+//            Resource resource = new UrlResource(filePath.toUri());
+//
+//            if (resource.exists() && resource.isReadable()) {
+//                return ResponseEntity.ok()
+//                        .contentType(MediaType.APPLICATION_PDF) // Tipo de contenido PDF
+//                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getName() + "\"")
+//                        .body(resource);
+//            } else {
+//                return ResponseEntity.status(404).body(null); // El archivo no es legible
+//            }
+//        } catch (IOException e) {
+//            return ResponseEntity.status(500).body(null); // Error al acceder al archivo
+//        }
+//    }
+//
+//
 
 
     @GetMapping("/uploads")
     @ResponseBody
-
-
     public ResponseEntity<Resource> getFile() {
         // Obtener la ruta dinámica desde el directorio de trabajo del proyecto
         String rutaBase = System.getProperty("user.dir");
@@ -333,8 +419,291 @@ public class ReducirPdfController {
 //                    .build();
 //        }
 //    }
+//
+//    // Comprimir archivo PDF
+//    @PostMapping("/comprimir-pdf")
+//    public ResponseBase compressPDF(
+//            @RequestPart("archivo") MultipartFile archivo,
+//            @RequestParam(defaultValue = "150") int calidad,
+//            @RequestParam(defaultValue = "0.85") float tamanio) {
+//
+//        if (archivo.isEmpty()) {
+//            return ResponseBase.builder()
+//                    .code(400)
+//                    .message("Error: No file uploaded.")
+//                    .data(null)
+//                    .build();
+//        }
+//
+//        try {
+//            // Guardar el archivo temporalmente
+//            File inputFile = File.createTempFile("input-", ".pdf");
+//            archivo.transferTo(inputFile);
+//
+//            // Crear la ruta de salida para el archivo comprimido en la carpeta "compressed"
+//            String compressedDir = System.getProperty("user.dir") + "/compressed";  // Ruta para la carpeta comprimida
+//            File outputFile = new File(compressedDir + File.separator + "comprimido-" + inputFile.getName());
+//
+//            // Crear el directorio si no existe
+//            File compressedFolder = new File(compressedDir);
+//            if (!compressedFolder.exists()) {
+//                compressedFolder.mkdirs(); // Crear la carpeta "compressed" si no existe
+//            }
+//
+//
+//
+//            // Llamar al servicio para comprimir el PDF
+//            ResponseBase response = reducirPdfService.reducirPDF(
+//                    inputFile.getAbsolutePath(),
+//                    outputFile.getAbsolutePath(),
+//                    calidad,
+//                    tamanio
+//            );
+//
+//            // URL del archivo comprimido
+//            String compressedFileUrl = "http://localhost:8080/compressed/" + outputFile.getName();
+//
+//            // Verificar si el archivo ya existe y eliminarlo si es necesario
+//            if (outputFile.exists()) {
+//                boolean deleted = outputFile.delete(); // Eliminar el archivo existente
+//                if (!deleted) {
+//                    return ResponseBase.builder()
+//                            .code(500)
+//                            .message("Error: No se pudo reemplazar el archivo existente.")
+//                            .data(null)
+//                            .build();
+//                }
+//            }
+//
+//            return ResponseBase.builder()
+//                    .code(HttpStatus.OK.value())
+//                    .message("PDF comprimido exitosamente.")
+//                    .data(compressedFileUrl) // Retornar la URL del archivo comprimido
+//                    .build();
+//
+//        } catch (IOException e) {
+//            return ResponseBase.builder()
+//                    .code(500)
+//                    .message("Error durante la compresión del PDF: " + e.getMessage())
+//                    .data(null)
+//                    .build();
+//        }
+//    }
 
-    // Comprimir archivo PDF
+
+//
+//    @PostMapping("/comprimir-pdf")
+//    public ResponseBase compressPDF(
+//            @RequestPart("archivo") MultipartFile archivo,
+//            @RequestParam(defaultValue = "150") int calidad,
+//            @RequestParam(defaultValue = "0.85") float tamanio) {
+//
+//        if (archivo.isEmpty()) {
+//            return ResponseBase.builder()
+//                    .code(400)
+//                    .message("Error: No file uploaded.")
+//                    .data(null)
+//                    .build();
+//        }
+//
+//        try {
+//            // Guardar el archivo temporalmente
+//            File inputFile = File.createTempFile("input-", ".pdf");
+//            archivo.transferTo(inputFile);
+//
+//            // Crear la ruta de salida para el archivo comprimido en la carpeta "compressed"
+//            String compressedDir = System.getProperty("user.dir") + "/compressed";  // Ruta para la carpeta comprimida
+//            File compressedFolder = new File(compressedDir);
+//
+//            // Crear la carpeta "compressed" si no existe
+//            if (!compressedFolder.exists()) {
+//                compressedFolder.mkdirs();
+//            }
+//
+//            // Crear el archivo de salida, con un nombre basado en el archivo original
+//            File outputFile = new File(compressedDir + File.separator + "comprimido-" + inputFile.getName());
+//
+//            // Verificar si el archivo ya existe y eliminarlo si es necesario
+//            if (outputFile.exists()) {
+//                boolean deleted = outputFile.delete(); // Eliminar el archivo existente
+//                if (!deleted) {
+//                    return ResponseBase.builder()
+//                            .code(500)
+//                            .message("Error: No se pudo reemplazar el archivo existente.")
+//                            .data(null)
+//                            .build();
+//                }
+//            }
+//
+//            // Llamar al servicio para comprimir el PDF
+//            ResponseBase response = reducirPdfService.reducirPDF(
+//                    inputFile.getAbsolutePath(),
+//                    outputFile.getAbsolutePath(),
+//                    calidad,
+//                    tamanio
+//            );
+//
+//            // URL del archivo comprimido
+//            String compressedFileUrl = "http://localhost:8080/compressed/" + outputFile.getName();
+//
+//            return ResponseBase.builder()
+//                    .code(HttpStatus.OK.value())
+//                    .message("PDF comprimido exitosamente.")
+//                    .data(compressedFileUrl) // Retornar la URL del archivo comprimido
+//                    .build();
+//
+//        } catch (IOException e) {
+//            return ResponseBase.builder()
+//                    .code(500)
+//                    .message("Error durante la compresión del PDF: " + e.getMessage())
+//                    .data(null)
+//                    .build();
+//        }
+//    }
+
+//
+//    @PostMapping("/comprimir-pdf")
+//    public ResponseBase compressPDF(
+//            @RequestPart("archivo") MultipartFile archivo,
+//            @RequestParam(defaultValue = "150") int calidad,
+//            @RequestParam(defaultValue = "0.85") float tamanio) {
+//
+//        if (archivo.isEmpty()) {
+//            return ResponseBase.builder()
+//                    .code(400)
+//                    .message("Error: No file uploaded.")
+//                    .data(null)
+//                    .build();
+//        }
+//
+//        try {
+//            // Guardar el archivo temporalmente
+//            File inputFile = File.createTempFile("input-", ".pdf");
+//            archivo.transferTo(inputFile);
+//
+//            // Crear la ruta de salida para el archivo comprimido en la carpeta "compressed"
+//            String compressedDir = System.getProperty("user.dir") + "/compressed";  // Ruta para la carpeta comprimida
+//            File compressedFolder = new File(compressedDir);
+//
+//            // Crear la carpeta "compressed" si no existe
+//            if (!compressedFolder.exists()) {
+//                compressedFolder.mkdirs();
+//            }
+//
+//            // Crear el archivo de salida, con un nombre basado en el archivo original
+//            File outputFile = new File(compressedDir + File.separator + "comprimido-" + inputFile.getName());
+//
+//            // Verificar si el archivo ya existe y eliminarlo si es necesario
+//            if (outputFile.exists()) {
+//                boolean deleted = outputFile.delete(); // Eliminar el archivo existente
+//                if (!deleted) {
+//                    return ResponseBase.builder()
+//                            .code(500)
+//                            .message("Error: No se pudo reemplazar el archivo existente.")
+//                            .data(null)
+//                            .build();
+//                }
+//            }
+//
+//            // Llamar al servicio para comprimir el PDF
+//            ResponseBase response = reducirPdfService.reducirPDF(
+//                    inputFile.getAbsolutePath(),
+//                    outputFile.getAbsolutePath(),
+//                    calidad,
+//                    tamanio
+//            );
+//
+//            // URL del archivo comprimido
+//            String compressedFileUrl = "http://localhost:8080/compressed/" + outputFile.getName();
+//
+//            return ResponseBase.builder()
+//                    .code(HttpStatus.OK.value())
+//                    .message("PDF comprimido exitosamente.")
+//                    .data(compressedFileUrl) // Retornar la URL del archivo comprimido
+//                    .build();
+//
+//        } catch (IOException e) {
+//            return ResponseBase.builder()
+//                    .code(500)
+//                    .message("Error durante la compresión del PDF: " + e.getMessage())
+//                    .data(null)
+//                    .build();
+//        }
+//    }
+//
+//
+//
+//    @PostMapping("/comprimir-pdf")
+//    public ResponseBase compressPDF(
+//            @RequestPart("archivo") MultipartFile archivo,
+//            @RequestParam(defaultValue = "150") int calidad,   // Calidad de las imágenes dentro del PDF (por ejemplo, resolución)
+//            @RequestParam(defaultValue = "0.85") float tamanio) { // Tamaño objetivo (porcentaje de reducción del tamaño total)
+//
+//        if (archivo.isEmpty()) {
+//            return ResponseBase.builder()
+//                    .code(400)
+//                    .message("Error: No file uploaded.")
+//                    .data(null)
+//                    .build();
+//        }
+//
+//        try {
+//            // Guardar el archivo temporalmente
+//            File inputFile = File.createTempFile("input-", ".pdf");
+//            archivo.transferTo(inputFile);
+//
+//            // Crear la ruta de salida para el archivo comprimido en la carpeta "compressed"
+//            String compressedDir = System.getProperty("user.dir") + "/compressed";  // Ruta para la carpeta comprimida
+//            File compressedFolder = new File(compressedDir);
+//
+//            // Crear la carpeta "compressed" si no existe
+//            if (!compressedFolder.exists()) {
+//                compressedFolder.mkdirs();
+//            }
+//
+//            // Usar un nombre fijo para el archivo comprimido
+//            File outputFile = new File(compressedDir + File.separator + "comprimido.pdf");
+//
+//            // Verificar si el archivo ya existe y eliminarlo si es necesario
+//            if (outputFile.exists()) {
+//                boolean deleted = outputFile.delete(); // Eliminar el archivo existente
+//                if (!deleted) {
+//                    return ResponseBase.builder()
+//                            .code(500)
+//                            .message("Error: No se pudo reemplazar el archivo existente.")
+//                            .data(null)
+//                            .build();
+//                }
+//            }
+//
+//            // Llamar al servicio para comprimir las imágenes dentro del PDF
+//            reducirPdfService.comprimirImagenes(
+//                    inputFile.getAbsolutePath(),
+//                    outputFile.getAbsolutePath(),
+//                    calidad,    // Este parámetro se usará para reducir la calidad de las imágenes
+//                    tamanio     // Este parámetro se usará para reducir el tamaño del archivo PDF
+//            );
+//
+//            // URL del archivo comprimido
+//            String compressedFileUrl = "http://localhost:8080/compressed/" + outputFile.getName();
+//
+//            return ResponseBase.builder()
+//                    .code(HttpStatus.OK.value())
+//                    .message("PDF comprimido exitosamente.")
+//                    .data(compressedFileUrl) // Retornar la URL del archivo comprimido
+//                    .build();
+//
+//        } catch (IOException e) {
+//            return ResponseBase.builder()
+//                    .code(500)
+//                    .message("Error durante la compresión del PDF: " + e.getMessage())
+//                    .data(null)
+//                    .build();
+//        }
+//    }
+//
+
+
     @PostMapping("/comprimir-pdf")
     public ResponseBase compressPDF(
             @RequestPart("archivo") MultipartFile archivo,
@@ -356,12 +725,26 @@ public class ReducirPdfController {
 
             // Crear la ruta de salida para el archivo comprimido en la carpeta "compressed"
             String compressedDir = System.getProperty("user.dir") + "/compressed";  // Ruta para la carpeta comprimida
-            File outputFile = new File(compressedDir + File.separator + "comprimido-" + inputFile.getName());
-
-            // Crear el directorio si no existe
             File compressedFolder = new File(compressedDir);
+
+            // Crear la carpeta "compressed" si no existe
             if (!compressedFolder.exists()) {
-                compressedFolder.mkdirs(); // Crear la carpeta "compressed" si no existe
+                compressedFolder.mkdirs();
+            }
+
+            // Usar un nombre fijo para el archivo comprimido, para evitar crear múltiples archivos
+            File outputFile = new File(compressedDir + File.separator + "comprimido.pdf");
+
+            // Verificar si el archivo ya existe y eliminarlo si es necesario
+            if (outputFile.exists()) {
+                boolean deleted = outputFile.delete(); // Eliminar el archivo existente
+                if (!deleted) {
+                    return ResponseBase.builder()
+                            .code(500)
+                            .message("Error: No se pudo reemplazar el archivo existente.")
+                            .data(null)
+                            .build();
+                }
             }
 
             // Llamar al servicio para comprimir el PDF
@@ -389,6 +772,52 @@ public class ReducirPdfController {
                     .build();
         }
     }
+
+
+    // ELIMINAR ARCHIVOS DE LAS CARPETAS compressed Y uploads
+    @DeleteMapping("/eliminar-archivos")
+    public ResponseBase eliminarArchivos() {
+        String rutaBase = System.getProperty("user.dir");
+
+        // Definir las rutas de las carpetas
+        Path uploadsPath = Paths.get(rutaBase, "uploads");
+        Path compressedPath = Paths.get(rutaBase, "compressed");
+
+        try {
+            eliminarArchivosDeCarpeta(uploadsPath);
+            eliminarArchivosDeCarpeta(compressedPath);
+
+            return ResponseBase.builder()
+                    .code(200)
+                    .message("Archivos eliminados correctamente de las carpetas 'uploads' y 'compressed'.")
+                    .data(null)
+                    .build();
+
+        } catch (IOException e) {
+            return ResponseBase.builder()
+                    .code(500)
+                    .message("Error eliminando archivos: " + e.getMessage())
+                    .data(null)
+                    .build();
+        }
+    }
+
+    // Método auxiliar para eliminar archivos de una carpeta específica
+    private void eliminarArchivosDeCarpeta(Path folderPath) throws IOException {
+        File folder = folderPath.toFile();
+        if (folder.exists() && folder.isDirectory()) {
+            File[] files = folder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.exists()) {
+                        file.delete();  // Eliminar cada archivo
+                    }
+                }
+            }
+        }
+    }
+
+
 
 
 }

@@ -15,20 +15,35 @@ export function Home() {
 
   const [file, setFile] = useState(null); // Archivo PDF
   
- 
+  const [progressValue, setProgressValue] = useState(0); // Valor del progreso
 
-  const handleFileChange = async (e) => {
-    // Verifica si es un cambio de archivo desde el input o un archivo arrastrado
-    const file = e.target.files ? e.target.files[0] : (e.dataTransfer ? e.dataTransfer.files[0] : null);
+  useEffect(() => {
+    console.log("Calidad:", calidadProgress, "%");
+    console.log("Tamaño:", tamanoProgress, "%");
+  }, [calidadProgress, tamanoProgress]);
+
+  useEffect(() => {
+    console.log("original pfg:", originalPdf, "%");
+    console.log("file size pfg:", fileSize, "%");
     
-    if (file) {
-      const sizeInBytes = file.size;
-    //  setFileSize(formatFileSize(sizeInBytes)); // Establece el tamaño del archivo formateado
-      subirArchivo(file);
-    } else {
-      console.error("No file selected");
-    }
-  };
+  }, [originalPdf,fileSize]);
+
+
+
+  
+
+  // const handleFileChange = async (e) => {
+  //   // Verifica si es un cambio de archivo desde el input o un archivo arrastrado
+  //   const file = e.target.files ? e.target.files[0] : (e.dataTransfer ? e.dataTransfer.files[0] : null);
+    
+  //   if (file) {
+  //     const sizeInBytes = file.size;
+  //   //  setFileSize(formatFileSize(sizeInBytes)); // Establece el tamaño del archivo formateado
+  //     subirArchivo(file);
+  //   } else {
+  //     console.error("No file selected");
+  //   }
+  // };
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -77,63 +92,183 @@ export function Home() {
     }
   };
 
+  
+  // useEffect(() => {
+  //   const fetchPdf = async () => {
+  //     try {
+  //       // Intentamos obtener el archivo de /compressed
+  //       const resCompressed = await axios.get("http://localhost:8080/compressed", {
+  //         responseType: "blob", // Esto asegura que el archivo PDF se reciba como un Blob (binario)
+  //       });
+
+  //       if (resCompressed.data) {
+  //         // Si hay archivo en /compressed
+  //         const sizeInBytes = resCompressed.data.size;
+  //         const formattedSize = formatFileSize(sizeInBytes); // Supón que tienes esta función para formatear el tamaño
+  //         setFileSize(formattedSize); // Establece el tamaño formateado en el estado
+  //         const url = URL.createObjectURL(resCompressed.data);
+  //         setOriginalPdf(url); // Asigna la URL del archivo a la variable originalPdf
+  //         setIsPdfFromCompressed(true); // Marca que el PDF es de "compressed"
+  //       } else {
+  //         // Si no hay archivo en /compressed, obtenemos de /uploads
+  //         const resUploads = await axios.get("http://localhost:8080/uploads", {
+  //           responseType: "blob",
+  //         });
+
+  //         const sizeInBytes = resUploads.data.size;
+  //         const formattedSize = formatFileSize(sizeInBytes);
+  //         setFileSize(formattedSize);
+  //         const url = URL.createObjectURL(resUploads.data);
+  //         setOriginalPdf(url); // Asigna la URL del archivo de uploads
+  //         setIsPdfFromCompressed(false); // Marca que el PDF es de "uploads"
+  //       }
+  //     } catch (err) {
+  //       console.error(err);
+  //       // alert("Error al obtener el archivo");
+  //     }
+  //   };
+
+  //   fetchPdf(); // Llamamos a la función al cargar el componente
+  // }, []);
+
+  
+
   useEffect(() => {
     const fetchPdf = async () => {
       try {
-        const res = await axios.get("http://localhost:8080/uploads", {
-          responseType: "blob", // Asegura que el archivo se reciba como un Blob
-        });
-
-        const sizeInBytes = res.data.size; // Tamaño del archivo en bytes
-        const formattedSize = formatFileSize(sizeInBytes); // Convertirlo a un formato legible
-        setFileSize(formattedSize); // Establecer el tamaño formateado
-
-        const url = URL.createObjectURL(res.data); // Crear una URL del Blob recibido
-        setOriginalPdf(url); // Asigna la URL del archivo al estado
-        setFile(res.data); // Almacena el archivo para futuras operaciones
-      } catch (err) {
-        console.error(err);
-        alert("Error al obtener el archivo");
-      }
-    };
-
-    fetchPdf(); // Llamada a la función al cargar el componente
-  }, []);
-
-
-  useEffect(() => {
-    // Llamada a la API para obtener el archivo PDF directamente
-    const fetchPdf = async () => {
-      try {
-        const res = await axios.get("http://localhost:8080/uploads", {
+        // Primero intentamos obtener el archivo de /compressed
+        const resCompressed = await axios.get("http://localhost:8080/compressed", {
           responseType: "blob", // Esto asegura que el archivo PDF se reciba como un Blob (binario)
         });
-
-         // Obtener el tamaño del archivo
-         const sizeInBytes = res.data.size; // Tamaño del archivo en bytes
-         const formattedSize = formatFileSize(sizeInBytes); // Convertirlo a un formato legible
-         setFileSize(formattedSize); // Establecer el tamaño formateado en el estado
-
-        const url = URL.createObjectURL(res.data); // Crear una URL del Blob recibido
-        setOriginalPdf(url); // Asigna la URL del archivo al estado originalPdf
+  
+        if (resCompressed.status === 204) {
+          // Si no hay archivo en /compressed, obtenemos de /uploads
+          const resUploads = await axios.get("http://localhost:8080/uploads", {
+            responseType: "blob",
+          });
+  
+          if (resUploads.status === 204) {
+            // Si tampoco hay archivo en uploads
+            console.log("No se encontraron archivos en 'compressed' ni en 'uploads'");
+            // Aquí puedes manejarlo, por ejemplo, mostrando un mensaje
+          } else {
+            const sizeInBytes = resUploads.data.size;
+            const formattedSize = formatFileSize(sizeInBytes);
+            setFileSize(formattedSize);
+       
+            const url = URL.createObjectURL(resUploads.data);
+            setOriginalPdf(url); // Asigna la URL del archivo de uploads
+            setFile(resUploads.data); // Almacena el archivo para futuras operaciones
+           // setFileFromCompressed(false); // Marca que el PDF es de "uploads"
+           
+          }
+        } else {
+          // Si hay archivo en /compressed
+          const sizeInBytes = resCompressed.data.size;
+          const formattedSize = formatFileSize(sizeInBytes);
+          setFileSize(formattedSize);
+         
+          const url = URL.createObjectURL(resCompressed.data);
+          setOriginalPdf(url); // Asigna la URL del archivo de compressed
+          setFile(resCompressed.data); // Almacena el archivo para futuras operaciones
+        //  setFileFromCompressed(true); // Marca que el PDF es de "compressed"
+        }
       } catch (err) {
         console.error(err);
-        alert("Error al obtener el archivo");
       }
     };
-
-    fetchPdf(); // Llamada a la función al cargar el componente
+  
+    fetchPdf(); // Llamamos a la función al cargar el componente
   }, []);
+  
+
+  
+  const handleFileChange = async (e) => {
+    // Verifica si es un cambio de archivo desde el input o un archivo arrastrado
+    const file = e.target.files ? e.target.files[0] : (e.dataTransfer ? e.dataTransfer.files[0] : null);
+    
+    if (file) {
+      const sizeInBytes = file.size;
+    //  setFileSize(formatFileSize(sizeInBytes)); // Establece el tamaño del archivo formateado
+      subirArchivo(file);
+    } else {
+      console.error("No file selected");
+    }
+  };
+  // const handleFileChange = (event) => {
+  //   setSubiendo(true);
+  //   const file = event.target.files[0];
+  //   if (file) {
+  //     // Aquí agregarías la lógica para cargar el archivo, tal vez con un axios POST
+  //     // al backend para subirlo, y luego actualizar el estado con el archivo subido.
+  //     setSubiendo(false);
+  //     alert("Archivo subido correctamente");
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   const fetchPdf = async () => {
+  //     try {
+  //       const res = await axios.get("http://localhost:8080/uploads", {
+  //         responseType: "blob", // Asegura que el archivo se reciba como un Blob
+  //       });
+
+  //       const sizeInBytes = res.data.size; // Tamaño del archivo en bytes
+  //       const formattedSize = formatFileSize(sizeInBytes); // Convertirlo a un formato legible
+  //       setFileSize(formattedSize); // Establecer el tamaño formateado
+
+  //       const url = URL.createObjectURL(res.data); // Crear una URL del Blob recibido
+  //       setOriginalPdf(url); // Asigna la URL del archivo al estado
+  //       setFile(res.data); // Almacena el archivo para futuras operaciones
+  //     } catch (err) {
+  //       console.error(err);
+  //     //  alert("Error al obtener el archivo");
+  //     }
+  //   };
+
+  //   fetchPdf(); // Llamada a la función al cargar el componente
+  // }, []);
+
+
+  // useEffect(() => {
+  //   // Llamada a la API para obtener el archivo PDF directamente
+  //   const fetchPdf = async () => {
+  //     try {
+  //       const res = await axios.get("http://localhost:8080/uploads", {
+  //         responseType: "blob", // Esto asegura que el archivo PDF se reciba como un Blob (binario)
+  //       });
+
+  //        // Obtener el tamaño del archivo
+  //        const sizeInBytes = res.data.size; // Tamaño del archivo en bytes
+  //        const formattedSize = formatFileSize(sizeInBytes); // Convertirlo a un formato legible
+  //        setFileSize(formattedSize); // Establecer el tamaño formateado en el estado
+
+  //       const url = URL.createObjectURL(res.data); // Crear una URL del Blob recibido
+  //       setOriginalPdf(url); // Asigna la URL del archivo al estado originalPdf
+  //     } catch (err) {
+  //       console.error(err);
+  //      // alert("Error al obtener el archivo");
+  //     }
+  //   };
+
+  //   fetchPdf(); // Llamada a la función al cargar el componente
+  // }, []);
 
 
   // Función para convertir el tamaño del archivo en bytes a KB, MB o GB
-  const formatFileSize = (sizeInBytes) => {
-    if (sizeInBytes < 1024) return `${sizeInBytes} Bytes`;
-    else if (sizeInBytes < 1024 * 1024) return `${(sizeInBytes / 1024).toFixed(2)} KB`;
-    else if (sizeInBytes < 1024 * 1024 * 1024) return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
-    else return `${(sizeInBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  };
+  // const formatFileSize = (sizeInBytes) => {
+  //   if (sizeInBytes < 1024) return `${sizeInBytes} Bytes`;
+  //   else if (sizeInBytes < 1024 * 1024) return `${(sizeInBytes / 1024).toFixed(2)} KB`;
+  //   else if (sizeInBytes < 1024 * 1024 * 1024) return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
+  //   else return `${(sizeInBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  // };
 
+  const formatFileSize = (size) => {
+    // Aquí puedes implementar la lógica para formatear el tamaño del archivo, como por ejemplo:
+    if (size < 1024) return size + ' bytes';
+    else if (size < 1048576) return (size / 1024).toFixed(2) + ' KB';
+    else return (size / 1048576).toFixed(2) + ' MB';
+  };
   const aumentarCalidad = () => {
     setCalidadProgress((prev) => (prev < 100 ? prev + 10 : 100));
   };
@@ -172,7 +307,16 @@ export function Home() {
     formData.append("tamanio", (tamanoProgress / 100).toFixed(2)); // Convertir el porcentaje de tamaño a un número entre 0 y 1
 
     try {
+
+      await axios.post("http://localhost:8080/comprimir-pdf", formData, {
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setProgressValue(percent); // Actualizar el progreso visual
+        },
+      });
       const res = await axios.post("http://localhost:8080/comprimir-pdf", formData);
+
+
       if (res.data.code === 200) {
      
         setOriginalPdf(res.data.data); // Actualizar el archivo comprimido
@@ -210,9 +354,26 @@ export function Home() {
   // }, []);
 
   return (
+
+<>
+    <div>
   
+    {subiendo && (
+  <div className="w-full mt-5">
+    <Progress
+      value={progressValue} // Usamos el valor dinámico del progreso
+      color="indigo"
+      className="h-2.5 rounded-full transition-all duration-300 ease-in-out"
+    />
+  {/* Muestra el valor del progreso */}
+  </div>
+)}
+
+
+    </div>
        
-          <CardBody className="w-full px-0 pt-0 pb-4 flex items-center justify-center h-full mt-3"  >
+          <CardBody className="w-full px-0 pt-0 pb-4 flex items-center justify-center h-full mt-3 "  >
+            
 
             {!originalPdf ? ( 
 
@@ -276,49 +437,48 @@ export function Home() {
   {/* Columna 1: PDF (80%) */}
   <div className="xl:col-span-8 xl:col-start-1">
     
-        {!originalPdf ? (
-          <div className="flex flex-col items-center border-2 border-dashed border-blue-500 rounded-lg py-10 px-20 mt-6 w-full">
-            <img src={pdfIcon} alt="PDF" className="w-20 h-20 mb-4" />
-            <label
-              htmlFor="upload"
-              className="cursor-pointer bg-red-600 hover:bg-red-800 text-white font-semibold py-3 px-6 rounded-xl"
-            >
-              {subiendo ? "Subiendo..." : "Selecciona un archivo PDF"}
-            </label>
-            <input
-              id="upload"
-              type="file"
-              className="hidden"
-              accept="application/pdf"
-              onChange={handleFileChange}
-            />
-            <p className="text-gray-600 mt-2">o arrastra aquí tu archivo PDF</p>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-col items-center w-full relative">
-             <iframe
-                 src={originalPdf} // La URL completa para mostrar el archivo
-                  width="100%" // Ajuste de ancho completo
-                  height="505vh" // Ajuste de altura
-                  className="border rounded-lg"
-                ></iframe>
-              <div className="flex flex-col mt-1 items-end w-full absolute bottom-5 right-5">
-                <div className="bg-white p-3 rounded-xl shadow-md border border-gray-300 max-w-lg">
-                  <Typography variant="paragraph" className="text-gray-800 font-extrabold text-right text-xl tracking-wide">
-                    {fileSize} {/* Muestra el tamaño del archivo en KB, MB o GB */}
-                  </Typography>
-                </div>
+  {!originalPdf ? (
+        <div className="flex flex-col items-center border-2 border-dashed border-blue-500 rounded-lg py-10 px-20 mt-6 w-full">
+          <img src={pdfIcon} alt="PDF" className="w-20 h-20 mb-4" />
+          <label
+            htmlFor="upload"
+            className="cursor-pointer bg-red-600 hover:bg-red-800 text-white font-semibold py-3 px-6 rounded-xl"
+          >
+            {subiendo ? "Subiendo..." : "Selecciona un archivo PDF"}
+          </label>
+          <input
+            id="upload"
+            type="file"
+            className="hidden"
+            accept="application/pdf"
+            onChange={handleFileChange}
+          />
+          <p className="text-gray-600 mt-2">o arrastra aquí tu archivo PDF</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col items-center w-full relative">
+            <iframe
+              src={originalPdf} // La URL completa para mostrar el archivo
+              width="100%" // Ajuste de ancho completo
+              height="505vh" // Ajuste de altura
+              className="border rounded-lg"
+            ></iframe>
+            <div className="flex flex-col mt-1 items-end w-full absolute bottom-5 right-5">
+              <div className="bg-white p-3 rounded-xl shadow-md border border-gray-300 max-w-lg">
+                <Typography variant="paragraph" className="text-gray-800 font-extrabold text-right text-xl tracking-wide">
+                  {fileSize} {/* Muestra el tamaño del archivo en KB, MB o GB */}
+                </Typography>
               </div>
             </div>
-          </>
-        )}
-     
+          </div>
+        </>
+      )}
     
   </div>
 
   {/* Columna 2: Contenido adicional (20%) */}
-  {fileSize && (
+{fileSize && (
     <div className="xl:col-span-4 xl:col-start-9 mt-2">
       <Card className="overflow-hidden bg-gray-50">
         {/* Sección de Tamaño de archivo */}
@@ -380,13 +540,15 @@ export function Home() {
               −
             </Button>
             <div className="flex-1">
-              <Progress
-                value={tamanoProgress}
-                color="indigo"
-                className="h-2.5 rounded-full transition-all duration-300 ease-in-out"
-              />
-            
-            </div>
+            <Progress
+              value={tamanoProgress}
+              color="indigo"
+              className="h-2.5 rounded-full transition-all duration-300 ease-in-out"
+            />
+            <Typography variant="small" className="text-center text-gray-600 mt-2">
+                <span className="font-medium">{tamanoProgress}%</span> completado
+              </Typography>
+          </div>
             <Button
               onClick={aumentarTamano}
               size="sm"
@@ -410,16 +572,7 @@ export function Home() {
                       <span className="text-xl font-semibold">Comprimir PDF</span>
                     </Button>
                      {/* Barra de progreso debajo del botón */}
-                      {subiendo && (
-                        <div className="w-full mt-5">
-                          <Progress
-                            value={100} // Puedes reemplazar esto con el valor dinámico si tienes el progreso real
-                            color="indigo"
-                            className="h-2.5 rounded-full transition-all duration-300 ease-in-out"
-                          />
-                          <span className="text-sm text-gray-500 mt-2">Comprimendo archivo...</span>
-                        </div>
-                      )}
+                      
                   </CardBody>
 
 
@@ -436,6 +589,7 @@ export function Home() {
             )}
           </CardBody>
 
+</>
   );
 }
 
