@@ -56,6 +56,19 @@ public class ReducirPdfController {
 
             // Usar una ruta absoluta dentro del directorio del proyecto
             String uploadDir = System.getProperty("user.dir") + "/uploads";  // Ruta absoluta en el directorio del proyecto
+            String compressedDir = System.getProperty("user.dir") + "/compressed";  // Ruta absoluta para la carpeta "compressed"
+
+            // Crear las carpetas si no existen
+            File carpetaUploads = new File(uploadDir);
+            if (!carpetaUploads.exists()) {
+                carpetaUploads.mkdirs();  // Crea la carpeta "uploads" si no existe
+            }
+
+            File carpetaCompressed = new File(compressedDir);
+            if (!carpetaCompressed.exists()) {
+                carpetaCompressed.mkdirs();  // Crea la carpeta "compressed" si no existe
+            }
+
             File destino = new File(uploadDir + File.separator + nombre);
 
             // Eliminar el archivo existente (ya que es el único archivo que se sube)
